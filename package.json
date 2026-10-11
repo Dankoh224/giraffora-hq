@@ -1,0 +1,33 @@
+{
+  "name": "giraffora-empresa-virtual",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "node scripts/serve.mjs",
+    "turno": "tsx --env-file-if-exists=.env.local scripts/turno.ts",
+    "tarea": "tsx --env-file-if-exists=.env.local scripts/tarea.ts",
+    "worker": "tsx --env-file-if-exists=.env.local scripts/worker.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "exceljs": "^4.4.0",
+    "imapflow": "^2.4.0",
+    "mailparser": "^3.9.38",
+    "marked": "^15.0.12",
+    "next": "^15.5.4",
+    "nodemailer": "^10.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/mailparser": "^3.9.0",
+    "@types/node": "^22.18.0",
+    "@types/nodemailer": "^8.0.2",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "giraffora-hq", "runtimeExecutable": "node", "runtimeArgs": ["scripts/serve.mjs"], "port": 3000 }
+  ]
+}

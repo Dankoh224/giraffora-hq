@@ -1,0 +1,56 @@
+# Turnos gratuitos: corren en los servidores de GitHub aunque tu PC esté apagado.
+# Requiere DATABASE_URL apuntando a Turso (SQLite en la nube) y las claves como "Secrets".
+name: Turnos de los agentes
+
+on:
+  schedule:
+    # Cada 30 min, todo el día: revisa y clasifica tus correos y envía lo aprobado.
+    # Los agentes trabajan una vez por hora (de noche, más tareas por turno). El brief queda listo
+    # en el turno de las 06:00 para que a las 07:00 tengas todo.
+    - cron: "5,35 * * * *"
+  workflow_dispatch: {}            # botón "Run workflow" para correrlo a mano
+
+concurrency: turno
+
+jobs:
+  turno:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/cache@v4
+        id: deps
+        with:
+          path: node_modules
+          key: deps-${{ hashFiles('package-lock.json') }}
+      - if: steps.deps.outputs.cache-hit != 'true'
+        run: npm ci --no-audit --no-fund
+      - run: npm run turno
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEFAULT_MODEL: ${{ vars.DEFAULT_MODEL || 'gemini:gemini-flash-latest' }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          MERCADO_PUBLICO_TICKET: ${{ secrets.MERCADO_PUBLICO_TICKET }}
+          MAIL_1_LABEL: ${{ vars.MAIL_1_LABEL }}
+          MAIL_1_USER: ${{ secrets.MAIL_1_USER }}
+          MAIL_1_PASS: ${{ secrets.MAIL_1_PASS }}
+          MAIL_2_LABEL: ${{ vars.MAIL_2_LABEL }}
+          MAIL_2_USER: ${{ secrets.MAIL_2_USER }}
+          MAIL_2_PASS: ${{ secrets.MAIL_2_PASS }}
+          MAIL_3_LABEL: ${{ vars.MAIL_3_LABEL }}
+          MAIL_3_USER: ${{ secrets.MAIL_3_USER }}
+          MAIL_3_PASS: ${{ secrets.MAIL_3_PASS }}
+          MAIL_3_FIRMA: ${{ vars.MAIL_3_FIRMA }}
+          MAIL_ENVIOS: ${{ vars.MAIL_ENVIOS }}
+          APP_URL: ${{ vars.APP_URL }}
+          BRIEF_HOUR: ${{ vars.BRIEF_HOUR || '6' }}
+          MAX_TASKS_PER_RUN: ${{ vars.MAX_TASKS_PER_RUN || '4' }}
+          MAX_TASKS_NIGHT: ${{ vars.MAX_TASKS_NIGHT || '10' }}
