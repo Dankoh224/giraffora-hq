@@ -188,7 +188,14 @@ export async function markdownToDocx(md: string, templatePath: string | null, va
   while (cover.length && !textOf(cover[cover.length - 1]).trim() && !/<w:drawing|<w:pict/.test(cover[cover.length - 1])) cover.pop();
   if (cover.length) cover.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
   const content = markdownToBody(body, protos);
-  const xml = docXml.slice(0, start) + cover.join("") + content + docXml.slice(sectAt);
+  // Cierre/firma de la plantilla (logo, lema, nombre y contacto): desde el último bloque con imagen
+  // después del contenido hasta el final. Se conserva tal cual, en su propia página.
+  let closing: string[] = [];
+  for (let i = blocks.length - 1; i > firstSection && i >= blocks.length - 8; i--) {
+    if (/<w:drawing|<w:pict/.test(blocks[i])) { closing = blocks.slice(i); break; }
+  }
+  const signature = closing.length ? `<w:p><w:r><w:br w:type="page"/></w:r></w:p>${closing.join("")}` : "";
+  const xml = docXml.slice(0, start) + cover.join("") + content + signature + docXml.slice(sectAt);
   zip.file("word/document.xml", xml);
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }
