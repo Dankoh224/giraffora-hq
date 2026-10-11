@@ -10,7 +10,8 @@ export function Chat({ agentId, agentName, initial }: { agentId: string; agentNa
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs, busy]);
+  // Llaves obligatorias: en Chrome reciente scrollIntoView devuelve una promesa y React la trataría como "cleanup".
+  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [msgs, busy]);
 
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
