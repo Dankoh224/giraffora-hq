@@ -86,7 +86,7 @@ Importancia: 5 = urgente o dinero/oportunidad hoy; 4 = requiere respuesta del CE
 "baja" = la persona pide no recibir más correos.
 
 ${JSON.stringify(batch)}` },
-    ], undefined, sec.model);
+    ], undefined, sec.model, "simple"); // clasificar = tarea simple → Haiku
     const text = String(res.message.content ?? "");
     let items: any[] = [];
     try { items = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1)); } catch { log("⚠️ la secretaria devolvió un formato inválido"); continue; }

@@ -49,6 +49,17 @@ export async function priorities(): Promise<Priority[]> {
       WHERE r.status='error' AND t.status IN ('queued','changes')`))
     out.push({ key: `r${r.id}`, level: 1, icon: "⚠️", text: `Hay un problema que corregir en "${r.title}" (${r.name}): ${String(r.error).slice(0, 160)}`, link: `/tareas/${r.id}`, when: r.finished_at });
 
+  for (const t of await all("SELECT * FROM tenders WHERE status='nueva' AND can_comply IN ('si','parcial') AND (close_date IS NULL OR close_date>=?) ORDER BY close_date", [date])) {
+    const days = t.close_date ? Math.ceil((new Date(String(t.close_date).slice(0, 10)).getTime() - new Date(date).getTime()) / 864e5) : null;
+    out.push({ key: `l${t.id}`, level: days !== null && days <= 5 ? 1 : 2, icon: "🔎",
+      text: `Gabriela encontró una licitación que ${t.can_comply === "si" ? "podemos cumplir" : "podríamos cumplir con brechas"}: "${t.name}" (${t.buyer ?? ""}${days !== null ? `, cierra en ${days} días` : ""}). ¿Preparamos la oferta?`,
+      link: "/licitaciones", when: t.created_at });
+  }
+
+  for (const c of await all("SELECT * FROM contacts WHERE next_action_date IS NOT NULL AND next_action_date<=? AND coalesce(stage,'') NOT IN ('perdido') ORDER BY next_action_date LIMIT 15", [date]))
+    out.push({ key: `k${c.id}`, level: c.next_action_date < date ? 1 : 2, icon: "🗂️",
+      text: `${c.next_action_date < date ? "Atrasado" : "Hoy"}: ${c.next_action ?? "seguimiento"} con ${c.name}${c.company ? ` (${c.company})` : ""}.`, link: "/crm", when: c.next_action_date });
+
   for (const td of await all("SELECT * FROM todos WHERE done=0 AND due IS NOT NULL AND due<=? ORDER BY due", [date]))
     out.push({ key: `d${td.id}`, level: td.due < date ? 1 : 2, icon: "✅", text: `${td.due < date ? "Se te pasó" : "Vence hoy"}: ${td.text}`, link: "/#pendientes", when: td.due });
 

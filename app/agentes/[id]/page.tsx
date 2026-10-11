@@ -78,6 +78,12 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                 </div>
                 <div className="field"><label>Dónde trabaja</label>
                 <select name="runner" defaultValue={a.runner}><option value="cloud">☁️ En la nube (también con el PC apagado)</option><option value="claude-code">🖥️ En mi PC con Claude Code (archivos, video, código)</option></select></div>
+                <div className="row">
+                  <div className="field" style={{ flex: 1 }}><label>Dificultad habitual (modelo Claude)</label>
+                    <select name="level" defaultValue={a.level ?? "normal"}><option value="simple">Simple → Haiku (rápido)</option><option value="normal">Normal → Sonnet</option><option value="complejo">Compleja → Opus</option></select></div>
+                  <div className="field" style={{ flex: 1 }}><label>Conexiones externas (MCP)</label>
+                    <input name="connections" defaultValue={JSON.parse(a.connections || "[]").join(", ")} placeholder="ej: higgsfield, canva" /></div>
+                </div>
                 <div className="field"><label>Habilidades</label>
                   {SKILL_NAMES.map((k) => (
                     <label key={k} className="row" style={{ fontWeight: 400, color: "var(--text)", margin: "2px 0" }}>

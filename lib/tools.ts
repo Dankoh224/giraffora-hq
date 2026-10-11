@@ -89,7 +89,7 @@ export const TOOLS: Record<string, Tool> = {
     label: "Consultar el datawarehouse",
     def: {
       name: "query_data",
-      description: "Consulta SQL de solo lectura (SELECT) al datawarehouse. Tablas: events(source,kind,from_name,from_contact,category,title,body,occurred_at), contacts(name,type,company,email,phone,linkedin,stage,notes,niches,subscribed,source,updated_at), emails(account,from_name,from_email,subject,summary,importance,category,status,received_at), campaigns(title,niche,subject,status,sent_count,template), email_templates(name), tasks(title,status,agent_id,priority,updated_at), deliverables(task_id,version,content), todos(text,due,done), outbox(channel,recipient,subject,status), agents(id,name,role,area_id).",
+      description: "Consulta SQL de solo lectura (SELECT) al datawarehouse. Tablas: events(source,kind,from_name,from_contact,category,title,body,occurred_at), contacts(name,type,company,email,phone,linkedin,stage,notes,niches,subscribed,source,deal_value,next_action,next_action_date,last_contact_at,updated_at), tenders(code,name,buyer,amount,close_date,url,requirements,can_comply,fit,gaps,status), emails(account,from_name,from_email,subject,summary,importance,category,status,received_at), campaigns(title,niche,subject,status,sent_count,template), email_templates(name), tasks(title,status,agent_id,priority,updated_at), deliverables(task_id,version,content), todos(text,due,done), outbox(channel,recipient,subject,status), agents(id,name,role,area_id).",
       parameters: obj({ sql: str("Consulta SELECT") }, ["sql"]),
     },
     async run({ sql }) {
@@ -107,7 +107,9 @@ export const TOOLS: Record<string, Tool> = {
       parameters: obj({
         name: str("Nombre completo"), type: str("cliente | estudiante | prospecto | aliado | prensa | proveedor | amigo"),
         company: str("Organización"), email: str("Correo"), phone: str("Teléfono"), linkedin: str("URL LinkedIn"),
-        stage: str("nuevo | contactado | conversando | propuesta | ganado | perdido"), notes: str("Notas"),
+        stage: str("nuevo | contactado | reunion | propuesta | negociacion | ganado | perdido"), notes: str("Nota de esta interacción (se agrega al historial)"),
+        deal_value: { type: "integer", description: "Valor estimado del negocio en CLP" }, next_action: str("Próxima acción concreta"),
+        next_action_date: str("Fecha de la próxima acción (AAAA-MM-DD)"), contacted: { type: "boolean", description: "true si hubo contacto hoy" },
       }, ["name"]),
     },
     async run(a) {
@@ -115,14 +117,17 @@ export const TOOLS: Record<string, Tool> = {
         "SELECT id, notes FROM contacts WHERE (email IS NOT NULL AND email=?) OR lower(name)=lower(?)", [a.email ?? "", a.name]);
       if (found) {
         await run(`UPDATE contacts SET type=coalesce(?,type), company=coalesce(?,company), email=coalesce(?,email), phone=coalesce(?,phone),
-          linkedin=coalesce(?,linkedin), stage=coalesce(?,stage), notes=?, updated_at=? WHERE id=?`,
+          linkedin=coalesce(?,linkedin), stage=coalesce(?,stage), notes=?, deal_value=coalesce(?,deal_value), next_action=coalesce(?,next_action),
+          next_action_date=coalesce(?,next_action_date), last_contact_at=CASE WHEN ? THEN ? ELSE last_contact_at END, updated_at=? WHERE id=?`,
           [a.type ?? null, a.company ?? null, a.email ?? null, a.phone ?? null, a.linkedin ?? null, a.stage ?? null,
-           [found.notes, a.notes].filter(Boolean).join("\n"), now(), found.id]);
+           [found.notes, a.notes && `[${now().slice(0, 10)}] ${a.notes}`].filter(Boolean).join("\n"), a.deal_value ?? null, a.next_action ?? null,
+           a.next_action_date ?? null, a.contacted ? 1 : 0, now(), now(), found.id]);
         return `Contacto actualizado (${found.id})`;
       }
       const id = newId();
-      await run("INSERT INTO contacts(id,name,type,company,email,phone,linkedin,stage,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-        [id, a.name, a.type ?? null, a.company ?? null, a.email ?? null, a.phone ?? null, a.linkedin ?? null, a.stage ?? "nuevo", a.notes ?? null, now(), now()]);
+      await run("INSERT INTO contacts(id,name,type,company,email,phone,linkedin,stage,notes,deal_value,next_action,next_action_date,last_contact_at,token,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [id, a.name, a.type ?? null, a.company ?? null, a.email ?? null, a.phone ?? null, a.linkedin ?? null, a.stage ?? "nuevo",
+         a.notes ? `[${now().slice(0, 10)}] ${a.notes}` : null, a.deal_value ?? null, a.next_action ?? null, a.next_action_date ?? null, a.contacted ? now() : null, newId() + newId(), now(), now()]);
       return `Contacto creado (${id})`;
     },
   },
@@ -173,6 +178,31 @@ export const TOOLS: Record<string, Tool> = {
       const niche = a.niche || "todos";
       const id = await createCampaign({ title: a.title, subject: a.subject, body: a.body, niche, template: a.template ?? null, agent_id: ctx.agent.id, task_id: ctx.taskId ?? null });
       return `Campaña ${id} creada como borrador para "${niche}" (${(await audience(niche)).length} destinatarios). El CEO la revisa y aprueba en Newsletter.`;
+    },
+  },
+  save_tender: {
+    label: "Guardar licitaciones evaluadas",
+    def: {
+      name: "save_tender",
+      description: "Guarda (o actualiza) una licitación evaluada, con su análisis de requisitos y si Giraffora puede cumplirlos.",
+      parameters: obj({
+        code: str("Código de la licitación (ej: 1234-56-LE26)"), name: str("Nombre"), buyer: str("Organismo comprador"),
+        amount: str("Monto estimado"), close_date: str("Fecha de cierre (AAAA-MM-DD HH:MM)"), url: str("Link a la ficha"),
+        requirements: str("Resumen de requisitos clave (experiencia, certificaciones, garantías, equipo, plazos, documentos)"),
+        can_comply: { type: "string", enum: ["si", "parcial", "no"] }, fit: { type: "integer", description: "Calce con Giraffora 1–5" },
+        gaps: str("Brechas o razones (si es parcial o no)"), notes: str("Notas / estrategia sugerida"),
+      }, ["code", "name", "can_comply"]),
+    },
+    async run(a) {
+      const ex = await get("SELECT id, status FROM tenders WHERE code=?", [a.code]);
+      const vals = [a.name, a.buyer ?? null, a.amount ?? null, a.close_date ?? null, a.url ?? null, a.requirements ?? null, a.can_comply, a.fit ?? null, a.gaps ?? null, a.notes ?? null];
+      if (ex) {
+        await run("UPDATE tenders SET name=?, buyer=?, amount=?, close_date=?, url=?, requirements=?, can_comply=?, fit=?, gaps=?, notes=?, updated_at=? WHERE id=?", [...vals, now(), ex.id]);
+        return `Licitación ${a.code} actualizada.`;
+      }
+      await run("INSERT INTO tenders(id,code,name,buyer,amount,close_date,url,requirements,can_comply,fit,gaps,notes,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [newId(), a.code, ...vals, a.can_comply === "no" ? "descartada" : "nueva", now(), now()]);
+      return `Licitación ${a.code} guardada (${a.can_comply}).`;
     },
   },
   manage_subscriber: {

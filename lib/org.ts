@@ -4,7 +4,7 @@ import { areaTemplate, templateById, type Rank } from "./templates";
 export type Agent = {
   id: string; area_id: string; template_id: string | null; name: string; role: string; rank: Rank;
   emoji: string | null; skills: string; system_prompt: string; model: string | null;
-  routine: string | null; routine_hour: number | null; status: string; runner: string; created_at: string;
+  routine: string | null; routine_hour: number | null; status: string; runner: string; level: string; connections: string | null; created_at: string;
 };
 export type Area = { id: string; name: string; description: string | null; emoji: string | null };
 
@@ -29,9 +29,9 @@ export async function hireFromTemplate(templateId: string, nameOverride?: string
   const areaId = await ensureArea(t.area);
   const id = (await get("SELECT id FROM agents WHERE id=?", [t.id])) ? `${t.id}-${newId().slice(0, 4)}` : t.id;
   await run(
-    `INSERT INTO agents(id,area_id,template_id,name,role,rank,emoji,skills,system_prompt,routine,routine_hour,runner,created_at)
-     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, areaId, t.id, nameOverride || t.name, t.role, t.rank, t.emoji, JSON.stringify(t.skills), t.prompt, t.routine ?? null, t.routine_hour ?? null, t.runner ?? "cloud", now()],
+    `INSERT INTO agents(id,area_id,template_id,name,role,rank,emoji,skills,system_prompt,routine,routine_hour,runner,level,created_at)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, areaId, t.id, nameOverride || t.name, t.role, t.rank, t.emoji, JSON.stringify(t.skills), t.prompt, t.routine ?? null, t.routine_hour ?? null, t.runner ?? "cloud", t.level ?? "normal", now()],
   );
   return (await getAgent(id))!;
 }

@@ -62,9 +62,10 @@ export async function hireCustomAction(f: FormData) {
 export async function updateAgent(f: FormData) {
   const id = s(f, "id");
   await run(
-    `UPDATE agents SET name=?, role=?, rank=?, emoji=?, area_id=?, skills=?, system_prompt=?, routine=?, routine_hour=?, model=?, status=?, runner=? WHERE id=?`,
+    `UPDATE agents SET name=?, role=?, rank=?, emoji=?, area_id=?, skills=?, system_prompt=?, routine=?, routine_hour=?, model=?, status=?, runner=?, level=?, connections=? WHERE id=?`,
     [s(f, "name"), s(f, "role"), s(f, "rank"), s(f, "emoji"), s(f, "area_id"), JSON.stringify(f.getAll("skills").map(String)),
-     s(f, "prompt"), s(f, "routine") || null, s(f, "routine_hour") ? Number(s(f, "routine_hour")) : null, s(f, "model") || null, s(f, "status") || "active", s(f, "runner") === "claude-code" ? "claude-code" : "cloud", id],
+     s(f, "prompt"), s(f, "routine") || null, s(f, "routine_hour") ? Number(s(f, "routine_hour")) : null, s(f, "model") || null, s(f, "status") || "active", s(f, "runner") === "claude-code" ? "claude-code" : "cloud", s(f, "level") || "normal",
+     JSON.stringify(s(f, "connections").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean)), id],
   );
   revalidatePath("/", "layout");
 }

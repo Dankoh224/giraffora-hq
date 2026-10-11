@@ -95,6 +95,7 @@ export async function syncFiles(log: (s: string) => void = () => {}) {
     }
     await run("UPDATE deliverables SET exported_at=? WHERE id=?", [now(), d.id]);
     log(`📄 ${rel}/v${d.version}`);
+    await exportWord(d.task_id, d.version, d.content, dir, log);
   }
 
   // 3) Newsletter: Excel de suscriptores por nicho y plantillas
@@ -154,3 +155,27 @@ export const MIME: Record<string, string> = {
 };
 export const extOf = (name: string) => name.split(".").pop()?.toLowerCase() ?? "";
 export const TEXT_EXT = new Set(["md", "txt", "csv", "json", "srt", "vtt", "html", "py", "js", "ts"]);
+
+// Cada entrega se guarda también como Word con la plantilla de Giraffora (Archivos/Plantillas/Word).
+
+export async function wordTemplatePath(): Promise<string | null> {
+  const dir = absPath("Plantillas/Word");
+  await fs.mkdir(dir, { recursive: true });
+  const preferred = (await get<{ value: string }>("SELECT value FROM settings WHERE key='word_template'"))?.value;
+  const files = (await fs.readdir(dir)).filter((f) => /\.docx$/i.test(f) && !f.startsWith("~$"));
+  const pick = files.find((f) => f === preferred) ?? files[0];
+  return pick ? path.join(dir, pick) : null;
+}
+
+async function exportWord(taskId: string, version: number, content: string, dir: string, log: (s: string) => void) {
+  const t = await get("SELECT t.title, a.template_id FROM tasks t LEFT JOIN agents a ON a.id=t.agent_id WHERE t.id=?", [taskId]);
+  if (!t) return;
+  const { markdownToDocx } = await import("./docx");
+  const title = content.match(/^#\s+(.+)$/m)?.[1]?.replace(/[*#]/g, "").trim() ?? t.title;
+  const buf = await markdownToDocx(content.replace(/^#\s+.+$/m, ""), await wordTemplatePath(), {
+    titulo: title, fecha: new Date().toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" }), cliente: "",
+  });
+  const name = `${clean(title).slice(0, 70)} v${version}.docx`;
+  await fs.writeFile(path.join(dir, name), buf).catch(() => log(`⚠️ No pude escribir ${name} (¿está abierto en Word?)`));
+  log(`📘 ${name}`);
+}

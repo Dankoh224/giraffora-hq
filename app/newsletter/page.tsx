@@ -23,7 +23,7 @@ export default async function Newsletter() {
         <div><h1>Newsletter</h1><div className="muted">Información de calidad para tu comunidad, por nicho, desde {sender?.user ?? "tu correo de empresa"}. Nada sale sin tu aprobación.</div></div>
       </div>
       {!sender && <div className="notice">Conecta tu cuenta de empresa (MAIL_n_USER/PASS) y define <code>MAIL_ENVIOS</code> con su etiqueta para poder enviar.</div>}
-      {!process.env.APP_URL && <div className="notice">Sin <code>APP_URL</code> pública el link de baja funciona por respuesta ("BAJA"), que tu secretario procesa solo. Cuando publiques la app en Vercel, agrega APP_URL para la baja con un clic.</div>}
+      {!process.env.APP_URL && <div className="notice">Sin <code>APP_URL</code> pública el link de baja funciona por respuesta ("BAJA"), que tu secretaria procesa sola. Cuando publiques la app en Vercel, agrega APP_URL para la baja con un clic.</div>}
 
       <div className="grid g2" style={{ marginBottom: 16 }}>
         <section className="card">

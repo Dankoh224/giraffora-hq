@@ -124,5 +124,19 @@ export const MIGRATIONS = [
   "ALTER TABLE contacts ADD COLUMN unsubscribed_at TEXT",
   "ALTER TABLE contacts ADD COLUMN last_email_at TEXT",
   "ALTER TABLE campaigns ADD COLUMN template TEXT",
+  // Dificultad habitual del agente (simple → Haiku, normal → Sonnet, complejo → Opus) y conexiones MCP externas
+  "ALTER TABLE agents ADD COLUMN level TEXT NOT NULL DEFAULT 'normal'",
+  "ALTER TABLE agents ADD COLUMN connections TEXT",
+  // CRM: valor del negocio, próxima acción y último contacto
+  "ALTER TABLE contacts ADD COLUMN deal_value INTEGER",
+  "ALTER TABLE contacts ADD COLUMN next_action TEXT",
+  "ALTER TABLE contacts ADD COLUMN next_action_date TEXT",
+  "ALTER TABLE contacts ADD COLUMN last_contact_at TEXT",
+  // Licitaciones evaluadas por la Cazadora (solo las que podemos cumplir pasan a oferta)
+  `CREATE TABLE IF NOT EXISTS tenders (
+    id TEXT PRIMARY KEY, code TEXT UNIQUE, name TEXT NOT NULL, buyer TEXT, amount TEXT, close_date TEXT, url TEXT,
+    requirements TEXT, can_comply TEXT, fit INTEGER, gaps TEXT, notes TEXT, status TEXT NOT NULL DEFAULT 'nueva',
+    offer_task_id TEXT, created_at TEXT, updated_at TEXT
+  )`,
   "CREATE UNIQUE INDEX IF NOT EXISTS contacts_email ON contacts(lower(email)) WHERE email IS NOT NULL AND email != ''",
 ];

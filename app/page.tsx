@@ -5,6 +5,8 @@ import { LEVEL, priorities } from "@/lib/priorities";
 import { Chat } from "@/components/Chat";
 import { Markdown } from "@/components/Markdown";
 import { Submit } from "@/components/Submit";
+import { SpacesNav } from "@/components/SpacesNav";
+import { warmAgent } from "@/lib/engine";
 import { addTodo, dismissNotice, newBrief, runShiftNow, toggleTodo } from "./actions";
 
 const LVL_CLASS = { 1: "b-changes", 2: "b-review", 3: "" } as const;
@@ -21,6 +23,7 @@ export default async function Home() {
     .map((m) => ({ role: m.role, content: m.content, tools: m.meta ? JSON.parse(m.meta).tools : undefined }));
   const team = await get<{ n: number }>("SELECT COUNT(*) AS n FROM agents WHERE status='active'");
   const noBrain = availableProviders().length === 0;
+  void warmAgent("jefa-gabinete"); // despierta a Clara en segundo plano para que responda rápido
 
   return (
     <>
@@ -31,6 +34,8 @@ export default async function Home() {
         </div>
         <form action={runShiftNow}><Submit className="btn" pending="Trabajando turno…">▶ Correr un turno ahora</Submit></form>
       </div>
+
+      <SpacesNav />
 
       {noBrain && <div className="notice">⚠️ Tus agentes aún no tienen cerebro. Agrega <b>GEMINI_API_KEY</b> en <code>.env.local</code> y reinicia.</div>}
 

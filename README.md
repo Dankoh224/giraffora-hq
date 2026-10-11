@@ -74,9 +74,9 @@ claude
    En el celular ves y apruebas todo el trabajo; los archivos pesados (videos) viven en tu PC. Si quieres
    verlos también en el celular, pon `FILES_DIR` dentro de tu carpeta de Google Drive para escritorio.
 
-## 3. Correo: secretario + newsletter (sin n8n ni plataformas de mailing)
+## 3. Correo: secretaria + newsletter (sin n8n ni plataformas de mailing)
 
-**Secretario (Tomás):** cada 30 min lee tus cuentas, las clasifica (cliente, estudiante, amigo, compra, spam…) con
+**Secretaria (Teresa):** cada 30 min lee tus cuentas, las clasifica (cliente, estudiante, amigo, compra, spam…) con
 importancia de 1 a 5, archiva solo las promociones, Clara te lo pone primero en tus prioridades de la app. En
 **Correo** le dices qué hacer con cada uno: "respóndele esto", "conviértelo en tarea", "no tomar en cuenta". Redacta,
 tú revisas y presionas Enviar: sale desde la misma cuenta, como respuesta en el mismo hilo.

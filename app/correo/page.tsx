@@ -24,7 +24,7 @@ export default async function Correo({ searchParams }: { searchParams: Promise<{
       <div className="page-head">
         <div>
           <h1>Correo</h1>
-          <div className="muted">Tu secretario lee {accs.length ? accs.map((a) => a.label).join(", ") : "tus cuentas"} cada 30 min y te lo ordena por importancia. Tú decides qué hacer.</div>
+          <div className="muted">Tu secretaria Teresa lee {accs.length ? accs.map((a) => a.label).join(", ") : "tus cuentas"} cada 30 min y te lo ordena por importancia. Tú decides qué hacer.</div>
         </div>
         <div className="row">
           <a className="btn sm" href={ver === "todo" ? "/correo" : "/correo?ver=todo"}>{ver === "todo" ? "Solo pendientes" : "Ver todo"}</a>

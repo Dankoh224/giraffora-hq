@@ -4,6 +4,7 @@ import { all, chileNow, get, newId, now, run, setSetting, setting } from "./db";
 import { chat, type Msg } from "./llm";
 import { activeAgents, createTask, getAgent, type Agent, type Area } from "./org";
 import { executeTool, toolsFor, type ToolCtx } from "./tools";
+import type { Level } from "./claude";
 
 type LogEntry = { t: "llm"; model: string } | { t: "tool"; name: string; args: unknown; out: string };
 
@@ -33,17 +34,17 @@ ${team}
 - Tu respuesta final es el entregable en Markdown: empieza con un título "# ..." y termina con "## Próximos pasos".`;
 }
 
-export async function runLoop(agent: Agent, messages: Msg[], ctx: ToolCtx, maxSteps = 8) {
+export async function runLoop(agent: Agent, messages: Msg[], ctx: ToolCtx, maxSteps = 8, opts: { skipClaude?: boolean; level?: Level } = {}) {
   const log: LogEntry[] = [];
   // Cerebro principal: Claude (tu plan Pro). Si no está disponible o se agotó el cupo, sigue con Gemini.
   const { claudeEnabled, claudeThink } = await import("./claude");
-  if (claudeEnabled()) {
+  if (!opts.skipClaude && claudeEnabled()) {
     const system = String(messages.find((m) => m.role === "system")?.content ?? "");
     const turns = messages.filter((m) => m.role === "user" || m.role === "assistant") as { role: string; content: string }[];
     const prompt = turns.length === 1 ? turns[0].content
       : `${turns.slice(0, -1).map((m) => `${m.role === "user" ? "CEO" : agent.name}: ${m.content}`).join("\n\n")}\n\n---\nÚltimo mensaje del CEO (respóndelo):\n${turns.at(-1)!.content}`;
     try {
-      const r = await claudeThink({ agent, system, prompt, taskId: ctx.taskId });
+      const r = await claudeThink({ agent, system, prompt, taskId: ctx.taskId, level: opts.level ?? ((agent as any).level as Level) ?? "normal" });
       ctx.questions.push(...r.questions);
       return { text: r.text, log: [{ t: "llm", model: r.model } as LogEntry] };
     } catch (e: any) {
@@ -133,28 +134,60 @@ export async function workOnTask(taskId: string) {
   }
 }
 
+const LIVE_RULES = "Estás conversando en vivo con el CEO. Responde de forma breve y directa (no hace falta el formato de entregable). Si te pide trabajo largo, crea tareas con delegate_task (a ti mismo si corresponde) para el próximo turno.";
+
+// Contexto fresco que se adjunta a cada mensaje (Clara ve lo mismo que el CEO en su panel).
+async function liveContext(agent: Agent) {
+  if (agent.id !== "jefa-gabinete") return "";
+  const { prioritiesText } = await import("./priorities");
+  const load = await all(`SELECT a.name, a.role, t.title, t.status FROM tasks t JOIN agents a ON a.id=t.agent_id
+    WHERE t.status IN ('queued','working','changes','review') ORDER BY a.name, t.updated_at DESC LIMIT 40`);
+  const team = (await activeAgents()).map((a) => `- ${a.id}: ${a.name}, ${a.role} — ${a.area_name}`).join("\n");
+  const { SPACES } = await import("./spaces");
+  const spaces = SPACES.map((sp) => `- ${sp.name}: ${sp.description} Módulos: ${sp.modules.map((m) => m.label).join(", ")}`).join("\n");
+  return `## Prioridades del CEO ahora (en orden)\n${await prioritiesText()}\n\n## Trabajo en curso del equipo\n${load.map((l) => `- ${l.name} (${l.role}): ${l.title} [${l.status}]`).join("\n") || "- Nadie tiene trabajo en curso."}\n\n## Equipo actual\n${team}\n\n## Espacios de la app (barra del inicio) y sus módulos\n${spaces}\nMenú lateral: Inicio, Correo, Trabajo, CRM, Licitaciones, Equipo, Newsletter, Contactos, Archivos, Bandeja, Datos, Ajustes.
+\nSi el CEO pregunta "¿qué hago?" o "¿en qué me enfoco?", respóndele con las prioridades en orden y por qué. Toda orden que te dé, la conviertes en trabajo: revisas si ya existe un agente que sepa hacerlo y le delegas; si no existe, contratas uno con un rol claro y luego le delegas. Confírmale a quién asignaste cada cosa.`;
+}
+
+// Despierta la sesión de Claude de un agente en segundo plano (para que el primer mensaje no espere el arranque).
+export async function warmAgent(agentId: string) {
+  const { claudeEnabled, hasSession, sessionAsk } = await import("./claude");
+  if (!claudeEnabled() || hasSession(agentId)) return;
+  const agent = await getAgent(agentId);
+  if (!agent) return;
+  sessionAsk(agentId, agent, `${await systemPrompt(agent)}\n\n${LIVE_RULES}`, "Te estás preparando para conversar con el CEO. Responde solo: lista").catch(() => {});
+}
+
 export async function chatWithAgent(agentId: string, text: string) {
   const agent = await getAgent(agentId);
   if (!agent) throw new Error("Agente no existe");
   const history = (await all("SELECT role, content FROM messages WHERE agent_id=? ORDER BY created_at DESC LIMIT 16", [agentId])).reverse();
   await run("INSERT INTO messages(id,agent_id,role,content,created_at) VALUES(?,?,'user',?,?)", [newId(), agentId, text, now()]);
-  let live = "\n\nEstás conversando en vivo con el CEO. Responde de forma breve y directa (no hace falta el formato de entregable). Si te pide trabajo largo, crea tareas con delegate_task (a ti mismo si corresponde) para el próximo turno.";
-  if (agent.id === "jefa-gabinete") {
-    // Clara ve lo mismo que el CEO en su panel: prioridades y carga de trabajo de cada agente.
-    const { prioritiesText } = await import("./priorities");
-    const load = await all(`SELECT a.name, a.role, t.title, t.status FROM tasks t JOIN agents a ON a.id=t.agent_id
-      WHERE t.status IN ('queued','working','changes','review') ORDER BY a.name, t.updated_at DESC LIMIT 40`);
-    live += `\n\n## Prioridades del CEO ahora (en orden)\n${await prioritiesText()}\n\n## Trabajo en curso del equipo\n${load.map((l) => `- ${l.name} (${l.role}): ${l.title} [${l.status}]`).join("\n") || "- Nadie tiene trabajo en curso."}
-\nSi el CEO pregunta "¿qué hago?" o "¿en qué me enfoco?", respóndele con las prioridades en orden y por qué. Toda orden que te dé, la conviertes en trabajo: revisas si ya existe un agente que sepa hacerlo y le delegas; si no existe, contratas uno con un rol claro y luego le delegas. Confírmale a quién asignaste cada cosa.`;
+  const context = await liveContext(agent);
+  let reply = "", tools: string[] = [];
+
+  // 1) Claude en sesión despierta (rápido tras el primer mensaje)
+  const { claudeEnabled, hasSession, sessionAsk } = await import("./claude");
+  if (claudeEnabled()) {
+    try {
+      const recap = hasSession(agentId) || !history.length ? ""
+        : `Conversación reciente (para que tengas contexto):\n${history.map((m) => `${m.role === "user" ? "CEO" : agent.name}: ${m.content}`).join("\n\n")}\n\n---\n`;
+      const r = await sessionAsk(agentId, agent, `${await systemPrompt(agent)}\n\n${LIVE_RULES}`,
+        `${recap}${context ? `[Contexto actualizado, no lo repitas salvo que sirva]\n${context}\n\n---\n` : ""}Mensaje del CEO: ${text}`);
+      reply = r.text;
+    } catch { /* respaldo abajo */ }
   }
-  const messages: Msg[] = [
-    { role: "system", content: (await systemPrompt(agent)) + live },
-    ...history.map((m) => ({ role: m.role, content: m.content }) as Msg),
-    { role: "user", content: text },
-  ];
-  const ctx: ToolCtx = { agent, questions: [] };
-  const { text: reply, log } = await runLoop(agent, messages, ctx, 6);
-  const tools = log.filter((l) => l.t === "tool").map((l: any) => l.name);
+  // 2) Respaldo: Gemini/Groq con el ciclo de herramientas propio
+  if (!reply) {
+    const messages: Msg[] = [
+      { role: "system", content: `${await systemPrompt(agent)}\n\n${LIVE_RULES}${context ? `\n\n${context}` : ""}` },
+      ...history.map((m) => ({ role: m.role, content: m.content }) as Msg),
+      { role: "user", content: text },
+    ];
+    const r = await runLoop(agent, messages, { agent, questions: [] }, 6, { skipClaude: true });
+    reply = r.text;
+    tools = r.log.filter((l) => l.t === "tool").map((l: any) => l.name);
+  }
   await run("INSERT INTO messages(id,agent_id,role,content,meta,created_at) VALUES(?,?,'assistant',?,?,?)", [newId(), agentId, reply, JSON.stringify({ tools }), now()]);
   return { reply, tools };
 }
@@ -228,7 +261,7 @@ export async function morningBrief() {
     const res = await chat([
       { role: "system", content: await systemPrompt(ema) },
       { role: "user", content: `Arma el brief matinal del CEO con estos datos (JSON):\n${JSON.stringify(data)}\n\nSecciones: "🔥 Lo más importante hoy" (máx 3), "📅 Agenda", "📧 Tus correos por importancia" (primero los de importancia 5 y 4: quién, qué quiere, en qué cuenta y la acción sugerida; luego un resumen agrupado del resto: clientes, estudiantes, amigos, compras que llegaron), "💬 Otros mensajes", "✅ Pendientes que vienen de ayer", "🌙 Lo que hizo tu equipo mientras dormías", "👀 Para revisar y aprobar" (incluye newsletters por aprobar). Si una sección no tiene datos, dilo en una línea. Sé breve.` },
-    ], undefined, ema.model);
+    ], undefined, ema.model, "simple");
     content = (res.message.content as string) || "";
   } catch {
     content = fallbackBrief(data);

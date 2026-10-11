@@ -37,7 +37,7 @@ function candidates(spec?: string | null) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function chat(messages: Msg[], tools?: ToolDef[], spec?: string | null) {
+export async function chat(messages: Msg[], tools?: ToolDef[], spec?: string | null, level: "simple" | "normal" | "complejo" = "normal") {
   // Pensar sin herramientas (clasificar correos, redactar, brief): también con Claude primero.
   if (!tools?.length) {
     const { claudeEnabled, claudeThink } = await import("./claude");
@@ -45,7 +45,7 @@ export async function chat(messages: Msg[], tools?: ToolDef[], spec?: string | n
       try {
         const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
         const prompt = messages.filter((m) => m.role !== "system").map((m) => String(m.content ?? "")).join("\n\n");
-        const r = await claudeThink({ agent: { skills: "[]", model: spec?.startsWith("claude:") ? spec : null } as any, system, prompt, withTools: false });
+        const r = await claudeThink({ agent: { skills: "[]", model: spec?.startsWith("claude:") ? spec : null } as any, system, prompt, withTools: false, level });
         return { message: { role: "assistant", content: r.text } as Msg, model: r.model, usage: null };
       } catch { /* respaldo: Gemini/Groq */ }
     }

@@ -113,3 +113,8 @@ details > summary { cursor: pointer; font-weight: 600; }
 @media (max-width: 900px) { .task-grid { grid-template-columns: 1fr; } }
 .dropzone { display: flex; flex-direction: column; justify-content: center; gap: 4px; border: 2px dashed var(--line); border-radius: var(--radius); padding: 18px; cursor: pointer; background: var(--panel); text-align: center; }
 .dropzone:hover, .dropzone[data-drag="true"] { border-color: var(--accent); background: var(--accent-soft); }
+
+.spaces { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 14px; margin-bottom: 6px; scrollbar-width: thin; }
+.spaces a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel); text-decoration: none; font-weight: 600; white-space: nowrap; }
+.spaces a:hover, .spaces a.on { border-color: var(--accent); background: var(--accent-soft); }
+.spaces a span { font-size: 1.1rem; }
