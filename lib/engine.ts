@@ -31,7 +31,13 @@ ${team}
 - Nada sale al exterior por tu cuenta: los mensajes van como borradores para aprobación del CEO.
 - Si falta información clave, usa ask_ceo y continúa con supuestos explícitos.
 - Si algo es de otra especialidad y puedes delegar, delega en vez de hacerlo mal.
-- Tu respuesta final es el entregable en Markdown: empieza con un título "# ..." y termina con "## Próximos pasos".`;
+- Tu respuesta final es el entregable en Markdown: empieza con un título "# ..." y termina con "## Próximos pasos". Usa "## 1. …" para las secciones y "### 1.1. …" para subsecciones.
+- Cada entrega se convierte también a Word con la plantilla de Giraffora. Si es un documento para un tercero (propuesta, informe, carta), antes del título agrega:
+  ---
+  tipo: PROPUESTA TÉCNICA Y COMERCIAL (o INFORME, CARTA, PROGRAMA…)
+  cliente: Organización · Área
+  destinatario: A Nombre Apellido, Cargo
+  ---`;
 }
 
 export async function runLoop(agent: Agent, messages: Msg[], ctx: ToolCtx, maxSteps = 8, opts: { skipClaude?: boolean; level?: Level } = {}) {

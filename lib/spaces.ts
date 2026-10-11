@@ -34,7 +34,15 @@ export const SPACES: Space[] = [
     ],
   },
   {
-    id: "producto", name: "Producto", emoji: "🎓", description: "Programas, cursos de IA y materiales.",
+    id: "producto", name: "Producto", emoji: "📊", description: "Organización y tableros: qué se está haciendo en toda la empresa y cuánto avanza.",
+    areas: ["producto"],
+    modules: [
+      { href: "/tableros", icon: "📊", label: "Tableros", hint: "Avance por espacio, proyecto y agente" },
+      { href: "/tareas", icon: "🗂️", label: "Todas las tareas", hint: "Kanban completo" },
+    ],
+  },
+  {
+    id: "cursos", name: "Cursos", emoji: "🎓", description: "Programas, cursos y talleres de IA: diseño, materiales y evaluaciones.",
     areas: ["pedagogia"],
     modules: [{ href: "/archivos?p=Pedagog%C3%ADa", icon: "📚", label: "Programas y materiales", hint: "Lo que entrega Pedagogía" }],
   },

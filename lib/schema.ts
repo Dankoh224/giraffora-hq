@@ -138,5 +138,11 @@ export const MIGRATIONS = [
     requirements TEXT, can_comply TEXT, fit INTEGER, gaps TEXT, notes TEXT, status TEXT NOT NULL DEFAULT 'nueva',
     offer_task_id TEXT, created_at TEXT, updated_at TEXT
   )`,
+  "ALTER TABLE tenders ADD COLUMN folder TEXT",
+  // Texto de las bases y anexos subidos a la carpeta de cada licitación
+  `CREATE TABLE IF NOT EXISTS tender_docs (
+    id TEXT PRIMARY KEY, tender_id TEXT NOT NULL, name TEXT NOT NULL, size INTEGER, text TEXT, updated_at TEXT,
+    UNIQUE(tender_id, name)
+  )`,
   "CREATE UNIQUE INDEX IF NOT EXISTS contacts_email ON contacts(lower(email)) WHERE email IS NOT NULL AND email != ''",
 ];

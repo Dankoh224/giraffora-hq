@@ -2,7 +2,10 @@ import Link from "next/link";
 import { all, chileNow, get } from "@/lib/db";
 import { SpacesNav } from "@/components/SpacesNav";
 import { Submit } from "@/components/Submit";
-import { searchTendersNow, tenderAction } from "../actions-sales";
+import { Uploader } from "@/components/Uploader";
+import { filesAvailable } from "@/lib/files";
+import { syncTenderDocs, tenderFolder } from "@/lib/tenders";
+import { addTender, reviewTender, searchTendersNow, tenderAction } from "../actions-sales";
 
 const COMPLY: Record<string, [string, string]> = { si: ["✅ Cumplimos", "b-done"], parcial: ["⚠️ Parcial", "b-review"], no: ["⛔ No cumplimos", "b-changes"] };
 const STATUS: Record<string, string> = { nueva: "nueva", preparando_oferta: "preparando oferta", postulada: "postulada", ganada: "ganada 🎉", perdida: "perdida", descartada: "descartada" };
@@ -14,6 +17,11 @@ export default async function Licitaciones({ searchParams }: { searchParams: Pro
   const list = await all(`SELECT * FROM tenders WHERE ${where} ORDER BY CASE status WHEN 'nueva' THEN 0 WHEN 'preparando_oferta' THEN 1 ELSE 2 END, coalesce(close_date,'9999') LIMIT 200`);
   const gabriela = await get("SELECT * FROM agents WHERE template_id='cazador-licitaciones' AND status='active' LIMIT 1");
   const olivia = await get("SELECT * FROM agents WHERE template_id='redactora-ofertas' AND status='active' LIMIT 1");
+  const local = filesAvailable();
+  if (local) await syncTenderDocs();
+  const docs = await all("SELECT tender_id, name, size, length(text) AS chars FROM tender_docs ORDER BY name");
+  const folders: Record<string, string> = {};
+  if (local) for (const t of list) folders[t.id] = await tenderFolder(t.id);
   const days = (d?: string) => (d ? Math.ceil((new Date(d.slice(0, 10)).getTime() - new Date(date).getTime()) / 864e5) : null);
 
   return (
@@ -31,6 +39,15 @@ export default async function Licitaciones({ searchParams }: { searchParams: Pro
           <Link key={k} href={`/licitaciones?ver=${k}`} className={`btn sm ${ver === k ? "primary" : ""}`}>{l}</Link>)}
         <Link href="/archivos?p=Plantillas%2FWord" className="btn sm">📘 Plantillas Word</Link>
       </div>
+
+      <details className="card" style={{ marginBottom: 12 }}>
+        <summary><b>＋ Agregar una licitación a mano</b> <span className="small muted">(si la encontraste tú)</span></summary>
+        <form action={addTender} className="stack" style={{ gap: 6, marginTop: 8 }}>
+          <div className="row"><input name="code" placeholder="Código (ej: 1234-56-LE26)" style={{ flex: 1 }} /><input name="name" placeholder="Nombre" required style={{ flex: 2 }} /></div>
+          <div className="row"><input name="buyer" placeholder="Organismo" style={{ flex: 1 }} /><input name="close_date" type="date" style={{ flex: 1 }} /><input name="url" placeholder="Link a la ficha" style={{ flex: 2 }} /></div>
+          <Submit className="btn sm primary" pending="Creando…">Agregar y crear su carpeta</Submit>
+        </form>
+      </details>
 
       <div className="stack">
         {list.map((t) => {
@@ -54,6 +71,19 @@ export default async function Licitaciones({ searchParams }: { searchParams: Pro
                 <p className="small" style={{ whiteSpace: "pre-wrap" }}>{t.requirements}</p>
                 {t.gaps && <p className="small"><b>Brechas:</b> {t.gaps}</p>}
                 {t.notes && <p className="small"><b>Estrategia:</b> {t.notes}</p>}
+              </details>
+              <details style={{ marginTop: 6 }} open={!docs.some((d) => d.tender_id === t.id) && t.status === "nueva"}>
+                <summary className="small"><b>📎 Bases y anexos ({docs.filter((d) => d.tender_id === t.id).length})</b></summary>
+                <ul className="list small">{docs.filter((d) => d.tender_id === t.id).map((d) => (
+                  <li key={d.name}>{local ? <Link href={`/archivos?p=${encodeURIComponent(`${folders[t.id]}/${d.name}`)}`}>📄 {d.name}</Link> : <>📄 {d.name}</>}
+                    <span className="muted"> · {Math.round((d.size ?? 0) / 1024)} KB · {d.chars ? "texto leído ✓" : "sin texto legible"}</span></li>
+                ))}</ul>
+                {local ? <Uploader dir={folders[t.id]} label="Subir bases, anexos y formularios descargados" />
+                  : <p className="small muted">Los documentos se suben desde el PC.</p>}
+                {docs.some((d) => d.tender_id === t.id) && (
+                  <form action={reviewTender} style={{ marginTop: 8 }}><input type="hidden" name="id" value={t.id} />
+                    <Submit className="btn sm" pending="Gabriela está leyendo…">🔍 Revisar requisitos con estos documentos</Submit></form>
+                )}
               </details>
               <form action={tenderAction} className="row" style={{ marginTop: 8 }}>
                 <input type="hidden" name="id" value={t.id} />

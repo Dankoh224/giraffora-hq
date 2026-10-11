@@ -102,6 +102,10 @@ export async function syncFiles(log: (s: string) => void = () => {}) {
   const { syncSubscriberSheets, syncTemplates } = await import("./subscribers");
   await syncTemplates();
   await syncSubscriberSheets(log);
+
+  // 4) Licitaciones: texto de bases y anexos
+  const { syncTenderDocs } = await import("./tenders");
+  await syncTenderDocs(log);
 }
 
 export type Entry = { name: string; rel: string; dir: boolean; size: number; mtime: number };
@@ -170,10 +174,11 @@ export async function wordTemplatePath(): Promise<string | null> {
 async function exportWord(taskId: string, version: number, content: string, dir: string, log: (s: string) => void) {
   const t = await get("SELECT t.title, a.template_id FROM tasks t LEFT JOIN agents a ON a.id=t.agent_id WHERE t.id=?", [taskId]);
   if (!t) return;
-  const { markdownToDocx } = await import("./docx");
-  const title = content.match(/^#\s+(.+)$/m)?.[1]?.replace(/[*#]/g, "").trim() ?? t.title;
-  const buf = await markdownToDocx(content.replace(/^#\s+.+$/m, ""), await wordTemplatePath(), {
-    titulo: title, fecha: new Date().toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" }), cliente: "",
+  const { markdownToDocx, splitMeta } = await import("./docx");
+  const title = splitMeta(content).meta.titulo || t.title;
+  const buf = await markdownToDocx(content, await wordTemplatePath(), {
+    titulo: title, tipo: t.template_id === "redactora-ofertas" ? "PROPUESTA TÉCNICA Y COMERCIAL" : "INFORME",
+    fecha: new Date().toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" }),
   });
   const name = `${clean(title).slice(0, 70)} v${version}.docx`;
   await fs.writeFile(path.join(dir, name), buf).catch(() => log(`⚠️ No pude escribir ${name} (¿está abierto en Word?)`));

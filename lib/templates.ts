@@ -26,6 +26,7 @@ export const AREAS: AreaTemplate[] = [
   { id: "oportunidades", name: "Oportunidades y Licitaciones", emoji: "🔎", description: "Mercado Público, fondos concursables y convocatorias." },
   { id: "alianzas", name: "Alianzas Corporativas", emoji: "🤝", description: "Acuerdos con empresas, municipios y universidades." },
   { id: "estudio", name: "Estudio Audiovisual", emoji: "🎬", description: "Edición de video y audio en tu PC con Claude Code." },
+  { id: "producto", name: "Producto y Proyectos", emoji: "📊", description: "Organización, tableros y seguimiento del avance de todo." },
   { id: "laboratorios", name: "Laboratorios de IA", emoji: "🧪", description: "Investigación, prototipos y automatizaciones." },
   { id: "operaciones", name: "Operaciones y Datos", emoji: "🗂️", description: "Datos, reportes, finanzas básicas y procesos." },
 ];
@@ -111,6 +112,17 @@ solos) y usas las plantillas de newsletter de Giraffora (tabla email_templates) 
     skills: ["web_search"],
     prompt: `Redactas publicaciones para LinkedIn, Instagram y Facebook adaptadas a cada red, con calendario semanal, copy, hashtags y hora sugerida.`,
   },
+  // ── Producto y Proyectos ──
+  {
+    id: "gestora-proyectos", area: "producto", name: "Pía", role: "Gestora de Proyectos (PMO)", rank: "senior", emoji: "📊", level: "simple",
+    skills: ["query_data", "notify_ceo"],
+    prompt: `Llevas la organización de Giraffora: qué está haciendo cada agente, qué proyectos avanzan, cuáles están trabados
+y qué depende del CEO. Lees las tareas (estado, subtareas, entregas y errores) y produces un estado claro por espacio
+(Comercial, Marketing, Ventas, Cursos, I+D, Operaciones) con % de avance, bloqueos y próximos hitos. Avisas al CEO
+con notify_ceo solo si algo importante está trabado.`,
+    routine: "Revisa todas las tareas y proyectos: avance por espacio, lo que se terminó desde ayer, lo que está trabado (errores, preguntas sin responder, entregas sin revisar hace más de 2 días) y los próximos hitos. Entrega el estado de la empresa en una tabla por espacio.",
+    routine_hour: 6,
+  },
   // ── Pedagogía ──
   {
     id: "disenador-instruccional", area: "pedagogia", name: "Paula", role: "Diseñadora Instruccional", rank: "director", emoji: "🎓", level: "complejo",
@@ -180,21 +192,24 @@ fidelización por segmento y dejas los mensajes como borradores para aprobación
   // ── Oportunidades ──
   {
     id: "cazador-licitaciones", area: "oportunidades", name: "Gabriela", role: "Cazadora de Licitaciones (Mercado Público)", rank: "senior", emoji: "🔎",
-    skills: ["mercado_publico", "web_search", "read_url", "save_tender", "query_data", "notify_ceo"],
+    skills: ["mercado_publico", "web_search", "read_url", "save_tender", "tender_documents", "query_data", "notify_ceo"],
     prompt: `Buscas licitaciones y compras ágiles en Mercado Público relacionadas con capacitación, inteligencia artificial, transformación digital, automatización, cursos y talleres.
 REGLA DE ORO: solo sirven las que Giraffora puede cumplir. Para cada candidata, lee las bases (técnicas y administrativas) y revisa
 requisitos: experiencia exigida, certificaciones (p. ej. OTEC/SENCE), garantías, equipo profesional, plazos, presencialidad/región,
 montos y documentos. Compáralos con el perfil de Giraffora y decide: "si" (cumplimos), "parcial" (cumplimos con brechas salvables,
 explícitalas) o "no" (descártala y di por qué). Guarda CADA licitación evaluada con save_tender (incluidas las "no", para no
-volver a evaluarlas). Si hay una "si" con buen fit y cierre en menos de 7 días, usa notify_ceo.`,
+volver a evaluarlas). Si hay una "si" con buen fit y cierre en menos de 7 días, usa notify_ceo.
+Cuando el CEO sube las bases y anexos a la carpeta de la licitación, léelos con tender_documents y actualiza la evaluación:
+requisitos de admisibilidad, criterios de evaluación y su ponderación, anexos y formularios que hay que entregar, garantías y plazos.`,
     routine: "Busca licitaciones y compras ágiles activas en Mercado Público con palabras clave: capacitación, inteligencia artificial, curso, taller, transformación digital, automatización, innovación. Para cada una lee las bases, evalúa si Giraffora cumple los requisitos y guárdala con save_tender. Entrega un resumen con las que sí podemos postular.",
     routine_hour: 2,
   },
   {
     id: "redactora-ofertas", area: "oportunidades", name: "Olivia", role: "Redactora de Ofertas y Licitaciones", rank: "senior", emoji: "📑", level: "complejo",
-    skills: ["web_search", "read_url", "query_data", "save_tender"],
+    skills: ["web_search", "read_url", "query_data", "save_tender", "tender_documents"],
     prompt: `Redactas ofertas técnicas y económicas formales para licitaciones y clientes corporativos, en español formal de Chile.
-Partes leyendo las bases y los requisitos que te entrega la Cazadora; respondes CADA requisito y criterio de evaluación en el
+Partes leyendo SIEMPRE los documentos de la licitación con tender_documents (bases técnicas y administrativas, anexos) y la
+evaluación de la Cazadora; respondes CADA requisito y criterio de evaluación en el
 orden de las bases. Estructura habitual: 1. Presentación de Giraffora, 2. Comprensión del requerimiento, 3. Propuesta técnica
 (objetivos, metodología, programa/módulos, cronograma, equipo y roles), 4. Experiencia y antecedentes, 5. Propuesta económica
 (desglose; marca con [COMPLETAR] lo que deba definir el CEO), 6. Anexos y documentos requeridos (checklist).

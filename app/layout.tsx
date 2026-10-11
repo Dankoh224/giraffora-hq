@@ -13,6 +13,7 @@ const NAV = [
   { href: "/tareas", icon: "🗂️", label: "Trabajo", mobile: true },
   { href: "/crm", icon: "💼", label: "CRM", mobile: true },
   { href: "/licitaciones", icon: "🔎", label: "Licitaciones" },
+  { href: "/tableros", icon: "📊", label: "Tableros" },
   { href: "/bandeja", icon: "📤", label: "Bandeja" },
   { href: "/equipo", icon: "🦒", label: "Equipo", mobile: true },
   { href: "/newsletter", icon: "📰", label: "Newsletter" },

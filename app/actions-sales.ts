@@ -65,3 +65,22 @@ export async function tenderAction(f: FormData) {
   revalidatePath("/licitaciones");
 }
 
+
+export async function addTender(f: FormData) {
+  const { createManualTender } = await import("@/lib/tenders");
+  const code = s(f, "code") || `MANUAL-${chileNow().date}`;
+  await createManualTender(code, s(f, "name") || code, s(f, "url") || null, s(f, "buyer") || null, s(f, "close_date") || null);
+  revalidatePath("/licitaciones");
+}
+
+export async function reviewTender(f: FormData) {
+  const t = await get("SELECT * FROM tenders WHERE id=?", [s(f, "id")]);
+  if (!t) return;
+  const g = await ensureAgent("cazador-licitaciones");
+  const id = await createTask({
+    title: `Revisar requisitos: ${t.name}`.slice(0, 110), agent_id: g.id, priority: 1,
+    brief: `Lee TODOS los documentos de la licitación ${t.code} con tender_documents (bases técnicas, administrativas, anexos y formularios) y actualiza su evaluación con save_tender:\n- requisitos de admisibilidad y si Giraffora los cumple (si / parcial / no)\n- criterios de evaluación y ponderaciones\n- anexos y formularios que hay que entregar\n- garantías, plazos, presencialidad y documentos legales\nEntrega además una tabla "Requisito | ¿Cumplimos? | Evidencia o brecha" y la lista de anexos a preparar.`,
+  });
+  if (filesAvailable()) void workOnTask(id).catch(() => {});
+  redirect(`/tareas/${id}`);
+}

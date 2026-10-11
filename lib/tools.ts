@@ -205,6 +205,28 @@ export const TOOLS: Record<string, Tool> = {
       return `Licitación ${a.code} guardada (${a.can_comply}).`;
     },
   },
+  tender_documents: {
+    label: "Leer bases y anexos de licitaciones",
+    def: {
+      name: "tender_documents",
+      description: "Lee los documentos (bases técnicas/administrativas, anexos, formularios) que el CEO subió a la carpeta de una licitación. Sin file devuelve la lista y un extracto de cada uno; con file devuelve ese documento completo.",
+      parameters: obj({ code: str("Código de la licitación"), file: str("Nombre exacto del documento (opcional)"), offset: { type: "integer", description: "Desde qué carácter seguir leyendo un documento largo" } }, ["code"]),
+    },
+    async run({ code, file, offset = 0 }) {
+      const t = await get("SELECT id, folder FROM tenders WHERE code=?", [code]);
+      if (!t) return "No existe esa licitación. Guárdala primero con save_tender.";
+      const docs = await all("SELECT name, size, text FROM tender_docs WHERE tender_id=? ORDER BY name", [t.id]);
+      if (!docs.length) return `Aún no hay documentos en Archivos/${t.folder ?? "Licitaciones/…"}. Pide al CEO (ask_ceo) que descargue las bases y anexos de Mercado Público y los suba ahí.`;
+      if (file) {
+        const d = docs.find((x) => x.name === file);
+        if (!d) return `No existe "${file}". Documentos: ${docs.map((x) => x.name).join(", ")}`;
+        const chunk = String(d.text ?? "(sin texto legible)").slice(offset, offset + 40000);
+        const more = (d.text?.length ?? 0) > offset + 40000 ? `\n\n[continúa: usa offset=${offset + 40000}]` : "";
+        return chunk + more;
+      }
+      return docs.map((d) => `### ${d.name} (${Math.round((d.size ?? 0) / 1024)} KB, ${d.text?.length ?? 0} caracteres)\n${String(d.text ?? "(sin texto legible: imagen o formato no soportado)").slice(0, 4000)}`).join("\n\n");
+    },
+  },
   manage_subscriber: {
     label: "Dar de alta / baja suscriptores",
     def: {
