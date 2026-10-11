@@ -174,13 +174,17 @@ export async function wordTemplatePath(): Promise<string | null> {
 async function exportWord(taskId: string, version: number, content: string, dir: string, log: (s: string) => void) {
   const t = await get("SELECT t.title, a.template_id FROM tasks t LEFT JOIN agents a ON a.id=t.agent_id WHERE t.id=?", [taskId]);
   if (!t) return;
-  const { markdownToDocx, splitMeta } = await import("./docx");
+  const { fillTemplateCopy, splitMeta } = await import("./docx");
   const title = splitMeta(content).meta.titulo || t.title;
-  const buf = await markdownToDocx(content, await wordTemplatePath(), {
-    titulo: title, tipo: t.template_id === "redactora-ofertas" ? "PROPUESTA TÉCNICA Y COMERCIAL" : "INFORME",
-    fecha: new Date().toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" }),
-  });
   const name = `${clean(title).slice(0, 70)} v${version}.docx`;
-  await fs.writeFile(path.join(dir, name), buf).catch(() => log(`⚠️ No pude escribir ${name} (¿está abierto en Word?)`));
-  log(`📘 ${name}`);
+  try {
+    // Copia de la plantilla en la carpeta de la tarea → se rellena esa copia
+    await fillTemplateCopy(await wordTemplatePath(), path.join(dir, name), content, {
+      titulo: title, tipo: t.template_id === "redactora-ofertas" ? "PROPUESTA TÉCNICA Y COMERCIAL" : "INFORME",
+      fecha: new Date().toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" }),
+    });
+    log(`📘 ${name}`);
+  } catch {
+    log(`⚠️ No pude escribir ${name} (¿está abierto en Word?)`);
+  }
 }

@@ -201,3 +201,13 @@ function blankDocx() {
   zip.file("word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:rPr><w:b/><w:sz w:val="36"/></w:rPr><w:t>1. Documento</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`);
   return zip;
 }
+
+// Flujo de los agentes: 1) se copia la plantilla de Giraffora a la carpeta de la tarea,
+// 2) se abre ESA copia y se rellena (portada + contenido). Todo lo demás del archivo —estilos,
+// tema, numeración, encabezado, pie, márgenes, imágenes— queda tal cual viene en tu plantilla.
+export async function fillTemplateCopy(templatePath: string | null, destPath: string, md: string, values: DocMeta) {
+  if (templatePath) await fs.copyFile(templatePath, destPath);
+  const buf = await markdownToDocx(md, templatePath ? destPath : null, values);
+  await fs.writeFile(destPath, buf);
+  return destPath;
+}
