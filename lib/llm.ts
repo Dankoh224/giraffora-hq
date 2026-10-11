@@ -38,6 +38,18 @@ function candidates(spec?: string | null) {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function chat(messages: Msg[], tools?: ToolDef[], spec?: string | null) {
+  // Pensar sin herramientas (clasificar correos, redactar, brief): también con Claude primero.
+  if (!tools?.length) {
+    const { claudeEnabled, claudeThink } = await import("./claude");
+    if (claudeEnabled()) {
+      try {
+        const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+        const prompt = messages.filter((m) => m.role !== "system").map((m) => String(m.content ?? "")).join("\n\n");
+        const r = await claudeThink({ agent: { skills: "[]", model: spec?.startsWith("claude:") ? spec : null } as any, system, prompt, withTools: false });
+        return { message: { role: "assistant", content: r.text } as Msg, model: r.model, usage: null };
+      } catch { /* respaldo: Gemini/Groq */ }
+    }
+  }
   const list = candidates(spec);
   if (!list.length) throw new Error("No hay ningún cerebro IA configurado. Agrega GEMINI_API_KEY (gratis) en .env.local");
   let lastErr = "";

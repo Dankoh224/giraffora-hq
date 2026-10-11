@@ -34,8 +34,23 @@ ${team}
 }
 
 export async function runLoop(agent: Agent, messages: Msg[], ctx: ToolCtx, maxSteps = 8) {
-  const tools = toolsFor(agent);
   const log: LogEntry[] = [];
+  // Cerebro principal: Claude (tu plan Pro). Si no está disponible o se agotó el cupo, sigue con Gemini.
+  const { claudeEnabled, claudeThink } = await import("./claude");
+  if (claudeEnabled()) {
+    const system = String(messages.find((m) => m.role === "system")?.content ?? "");
+    const turns = messages.filter((m) => m.role === "user" || m.role === "assistant") as { role: string; content: string }[];
+    const prompt = turns.length === 1 ? turns[0].content
+      : `${turns.slice(0, -1).map((m) => `${m.role === "user" ? "CEO" : agent.name}: ${m.content}`).join("\n\n")}\n\n---\nÚltimo mensaje del CEO (respóndelo):\n${turns.at(-1)!.content}`;
+    try {
+      const r = await claudeThink({ agent, system, prompt, taskId: ctx.taskId });
+      ctx.questions.push(...r.questions);
+      return { text: r.text, log: [{ t: "llm", model: r.model } as LogEntry] };
+    } catch (e: any) {
+      log.push({ t: "tool", name: "claude-no-disponible", args: {}, out: String(e.message).slice(0, 300) });
+    }
+  }
+  const tools = toolsFor(agent);
   for (let step = 0; step < maxSteps; step++) {
     const res = await chat(messages, tools, agent.model);
     log.push({ t: "llm", model: res.model });

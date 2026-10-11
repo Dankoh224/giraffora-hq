@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "exceljs": "^4.4.0",
     "imapflow": "^2.4.0",
     "mailparser": "^3.9.38",

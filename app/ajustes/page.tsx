@@ -31,7 +31,9 @@ export default async function Ajustes() {
         <section className="card">
           <h2>🔌 Conexiones</h2>
           <ul className="list">
-            <li className="row spread"><span><b>Cerebros IA</b><div className="small muted">{Object.keys(PROVIDERS).join(" · ")} · por defecto {process.env.DEFAULT_MODEL || "gemini:gemini-flash-latest"}</div></span>
+            <li className="row spread"><span><b>Cerebro principal</b><div className="small muted">Claude ({process.env.CLAUDE_MODEL || "sonnet"}) con tu plan Pro vía Claude Code; si se agota el cupo responde Gemini</div></span>
+              <span className={`badge ${(process.env.BRAIN || "claude") === "claude" ? "b-done" : ""}`}>{(process.env.BRAIN || "claude") === "claude" ? "Claude" : "solo Gemini"}</span></li>
+            <li className="row spread"><span><b>Cerebros de respaldo</b><div className="small muted">{Object.keys(PROVIDERS).join(" · ")} · por defecto {process.env.DEFAULT_MODEL || "gemini:gemini-flash-latest"}</div></span>
               <span className={`badge ${brains.length ? "b-done" : "b-changes"}`}>{brains.length ? brains.join(", ") : "ninguno"}</span></li>
             <li className="row spread"><span><b>Datawarehouse</b><div className="small muted">{dbUrl.startsWith("file:") ? "Archivo local en tu PC" : "Turso (nube)"}</div></span>
               <span className="badge b-done">{dbUrl.startsWith("file:") ? "local" : "nube"}</span></li>
