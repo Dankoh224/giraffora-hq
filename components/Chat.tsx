@@ -50,7 +50,7 @@ export function Chat({ agentId, agentName, initial }: { agentId: string; agentNa
         <div ref={end} />
       </div>
       <form className="chat-form" onSubmit={send}>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={`Escríbele a ${agentName}…`}
+        <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={`Escríbele a ${agentName}… (Enter envía · Shift+Enter nueva línea)`}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) send(e); }} />
         <button className="btn primary" disabled={busy}>Enviar</button>
       </form>

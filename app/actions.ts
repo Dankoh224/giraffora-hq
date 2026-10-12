@@ -180,3 +180,32 @@ export async function dismissNotice(f: FormData) {
   await run("UPDATE notices SET status='done', done_at=? WHERE id=?", [now(), s(f, "id")]);
   revalidatePath("/");
 }
+
+// ── Archivar / restaurar / eliminar tareas (incluye sus subtareas) ──
+async function withChildren(id: string): Promise<string[]> {
+  const kids = (await (await import("@/lib/db")).all<{ id: string }>("SELECT id FROM tasks WHERE parent_id=?", [id])).map((k) => k.id);
+  return [id, ...(await Promise.all(kids.map(withChildren))).flat()];
+}
+
+export async function archiveTask(f: FormData) {
+  for (const id of await withChildren(s(f, "task_id"))) await run("UPDATE tasks SET status='archived', updated_at=? WHERE id=?", [now(), id]);
+  revalidatePath("/", "layout");
+}
+
+export async function restoreTask(f: FormData) {
+  // Vuelve a "Para revisar" si ya tenía entrega; si no, a la cola.
+  for (const id of await withChildren(s(f, "task_id")))
+    await run("UPDATE tasks SET status=CASE WHEN iteration>0 THEN 'review' ELSE 'queued' END, updated_at=? WHERE id=?", [now(), id]);
+  revalidatePath("/", "layout");
+}
+
+export async function deleteTask(f: FormData) {
+  for (const id of await withChildren(s(f, "task_id"))) {
+    for (const t of ["deliverables", "feedback", "runs"]) await run(`DELETE FROM ${t} WHERE task_id=?`, [id]);
+    await run("DELETE FROM outbox WHERE task_id=? AND status='pending'", [id]);
+    await run("UPDATE tenders SET offer_task_id=NULL WHERE offer_task_id=?", [id]);
+    await run("DELETE FROM tasks WHERE id=?", [id]);
+  }
+  revalidatePath("/", "layout");
+  if (s(f, "back")) redirect(s(f, "back"));
+}

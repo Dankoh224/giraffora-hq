@@ -8,8 +8,23 @@ import { Submit } from "@/components/Submit";
 import { SpacesNav } from "@/components/SpacesNav";
 import { warmAgent } from "@/lib/engine";
 import { addTodo, dismissNotice, newBrief, runShiftNow, toggleTodo } from "./actions";
+import { TaskMenu } from "@/components/TaskMenu";
+import type { Priority } from "@/lib/priorities";
 
 const LVL_CLASS = { 1: "b-changes", 2: "b-review", 3: "" } as const;
+
+// Un ítem compacto de la lista de enfoque: ícono, texto (enlace) y acciones.
+function FocusItem({ p }: { p: Priority }) {
+  return (
+    <li className={`lvl${p.level}`}>
+      <span>{p.icon}</span>
+      <Link href={p.link} title={LEVEL[p.level]}>{p.text}</Link>
+      {p.noticeId
+        ? <form action={dismissNotice}><input type="hidden" name="id" value={p.noticeId} /><button className="btn sm" title="Hecho">✓</button></form>
+        : p.taskId ? <TaskMenu id={p.taskId} /> : null}
+    </li>
+  );
+}
 
 export default async function Home() {
   const { date, hour } = chileNow();
@@ -39,34 +54,29 @@ export default async function Home() {
 
       {noBrain && <div className="notice">⚠️ Tus agentes aún no tienen cerebro. Agrega <b>GEMINI_API_KEY</b> en <code>.env.local</code> y reinicia.</div>}
 
-      <div className="grid g2">
-        <section className="card">
-          <h2>🦒 Clara: en qué enfocarte</h2>
+      <div className="grid home-top">
+        <section className="card focus">
+          <h2>🦒 En qué enfocarte <span className="badge">{list.length}</span></h2>
           {list.length ? (
-            <ol className="list">
-              {list.slice(0, 12).map((p) => (
-                <li key={p.key} className="row" style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
-                  <span style={{ fontSize: "1.2rem" }}>{p.icon}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span className={`badge ${LVL_CLASS[p.level]}`}>{LEVEL[p.level]}</span>{" "}
-                    <Link href={p.link} style={{ textDecoration: "none" }}>{p.text}</Link>
-                  </div>
-                  {p.noticeId
-                    ? <form action={dismissNotice}><input type="hidden" name="id" value={p.noticeId} /><button className="btn sm" title="Hecho">✓</button></form>
-                    : <Link className="btn sm" href={p.link}>Ir</Link>}
-                </li>
-              ))}
-            </ol>
-          ) : <p className="muted">Todo al día. No hay nada que requiera tu atención ahora. 🎉</p>}
-          {list.length > 12 && <p className="small muted">…y {list.length - 12} cosas más de menor prioridad.</p>}
+            <ul className="focus-list">
+              {list.slice(0, 5).map((p) => <FocusItem key={p.key} p={p} />)}
+            </ul>
+          ) : <p className="muted small">Todo al día. 🎉</p>}
+          {list.length > 5 && (
+            <details>
+              <summary className="small muted">Ver {list.length - 5} más</summary>
+              <ul className="focus-list">{list.slice(5, 40).map((p) => <FocusItem key={p.key} p={p} />)}</ul>
+            </details>
+          )}
         </section>
 
         <section className="card">
           <h2>💬 Habla con Clara</h2>
-          <p className="small muted" style={{ marginTop: -6 }}>Dale todas tus órdenes a ella: decide a quién asignar cada cosa y contrata cuando falta alguien.</p>
           <Chat agentId="jefa-gabinete" agentName="Clara" initial={msgs} />
         </section>
+      </div>
 
+      <div className="grid g2" style={{ marginTop: 16 }}>
         <section className="card">
           <div className="row spread"><h2>☀️ Brief {brief ? `del ${brief.date}` : ""}</h2>
             <form action={newBrief}><Submit className="btn sm" pending="Preparando…">Actualizar</Submit></form></div>

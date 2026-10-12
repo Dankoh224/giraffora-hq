@@ -3,7 +3,7 @@
 import { all, chileNow } from "./db";
 import { niches } from "./contacts";
 
-export type Priority = { key: string; level: 1 | 2 | 3; icon: string; text: string; link: string; noticeId?: string; when?: string };
+export type Priority = { key: string; level: 1 | 2 | 3; icon: string; text: string; link: string; noticeId?: string; taskId?: string; when?: string };
 export const LEVEL = { 1: "Urgente", 2: "Importante", 3: "Cuando puedas" } as const;
 
 export async function priorities(): Promise<Priority[]> {
@@ -40,14 +40,14 @@ export async function priorities(): Promise<Priority[]> {
     const asks = String(t.content ?? "").includes("❓ Preguntas para el CEO");
     out.push({ key: `t${t.id}`, level: asks || t.priority === 1 ? 2 : 3, icon: asks ? "❓" : "👀",
       text: asks ? `${t.name} necesita que le respondas unas preguntas en "${t.title}".` : `${t.name} terminó "${t.title}". Revísalo y apruébalo o pídele cambios.`,
-      link: `/tareas/${t.id}`, when: t.updated_at });
+      link: `/tareas/${t.id}`, taskId: t.id, when: t.updated_at });
   }
 
   // Problemas: tareas cuyo último intento falló (ej. el desarrollo de una web que no compila)
   for (const r of await all(`SELECT t.id, t.title, a.name, r.error, r.finished_at FROM tasks t JOIN agents a ON a.id=t.agent_id
       JOIN runs r ON r.id=(SELECT id FROM runs WHERE task_id=t.id ORDER BY started_at DESC LIMIT 1)
       WHERE r.status='error' AND t.status IN ('queued','changes')`))
-    out.push({ key: `r${r.id}`, level: 1, icon: "⚠️", text: `Hay un problema que corregir en "${r.title}" (${r.name}): ${String(r.error).slice(0, 160)}`, link: `/tareas/${r.id}`, when: r.finished_at });
+    out.push({ key: `r${r.id}`, level: 1, icon: "⚠️", text: `Hay un problema que corregir en "${r.title}" (${r.name}): ${String(r.error).slice(0, 160)}`, link: `/tareas/${r.id}`, taskId: r.id, when: r.finished_at });
 
   for (const t of await all("SELECT * FROM tenders WHERE status='nueva' AND can_comply IN ('si','parcial') AND (close_date IS NULL OR close_date>=?) ORDER BY close_date", [date])) {
     const days = t.close_date ? Math.ceil((new Date(String(t.close_date).slice(0, 10)).getTime() - new Date(date).getTime()) / 864e5) : null;

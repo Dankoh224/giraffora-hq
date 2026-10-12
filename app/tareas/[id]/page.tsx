@@ -4,6 +4,7 @@ import { all, get } from "@/lib/db";
 import { Markdown } from "@/components/Markdown";
 import { Submit } from "@/components/Submit";
 import { Uploader } from "@/components/Uploader";
+import { TaskMenu } from "@/components/TaskMenu";
 import { filesAvailable, listDir, syncFiles, taskFolder } from "@/lib/files";
 import { reassignTask, reviewTask, workNow } from "../../actions";
 
@@ -38,10 +39,14 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             {t.iteration > 0 && <span>· versión {t.iteration}</span>}
           </div>
         </div>
+        <div className="row">
+        {t.status === "archived" && <span className="badge">🗄️ archivada</span>}
+        <TaskMenu id={id} archived={t.status === "archived"} back="/tareas" />
         <form action={workNow}>
           <input type="hidden" name="task_id" value={id} />
           <Submit className="btn" pending={`${t.name ?? "El agente"} está trabajando…`}>▶ Trabajar ahora</Submit>
         </form>
+        </div>
       </div>
 
       <div className="grid task-grid">
