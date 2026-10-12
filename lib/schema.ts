@@ -139,6 +139,10 @@ export const MIGRATIONS = [
     offer_task_id TEXT, created_at TEXT, updated_at TEXT
   )`,
   "ALTER TABLE tenders ADD COLUMN folder TEXT",
+  // Registro de errores (chat, agentes, correo, pantallas) para revisarlos y corregirlos
+  `CREATE TABLE IF NOT EXISTS error_log (
+    id TEXT PRIMARY KEY, source TEXT, message TEXT, detail TEXT, place TEXT, resolved INTEGER NOT NULL DEFAULT 0, created_at TEXT
+  )`,
   // Texto de las bases y anexos subidos a la carpeta de cada licitación
   `CREATE TABLE IF NOT EXISTS tender_docs (
     id TEXT PRIMARY KEY, tender_id TEXT NOT NULL, name TEXT NOT NULL, size INTEGER, text TEXT, updated_at TEXT,

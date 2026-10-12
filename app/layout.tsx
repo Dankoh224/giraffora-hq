@@ -20,6 +20,7 @@ const NAV = [
   { href: "/contactos", icon: "👥", label: "Contactos" },
   { href: "/archivos", icon: "📁", label: "Archivos" },
   { href: "/datos", icon: "🗄️", label: "Datos" },
+  { href: "/errores", icon: "🧯", label: "Errores" },
   { href: "/ajustes", icon: "⚙️", label: "Ajustes" },
 ];
 
@@ -28,9 +29,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   try {
     const review = await get<{ n: number }>("SELECT COUNT(*) AS n FROM tasks WHERE status='review'");
     const outbox = await get<{ n: number }>("SELECT COUNT(*) AS n FROM outbox WHERE status='pending'");
+    const errs = await get<{ n: number }>("SELECT COUNT(*) AS n FROM error_log WHERE resolved=0");
     const mail = await get<{ n: number }>("SELECT COUNT(*) AS n FROM emails WHERE status='nuevo' AND importance>=4");
     const news = await get<{ n: number }>("SELECT COUNT(*) AS n FROM campaigns WHERE status='borrador'");
-    counts = { "/tareas": review?.n ?? 0, "/bandeja": outbox?.n ?? 0, "/correo": mail?.n ?? 0, "/newsletter": news?.n ?? 0 };
+    counts = { "/tareas": review?.n ?? 0, "/bandeja": outbox?.n ?? 0, "/correo": mail?.n ?? 0, "/newsletter": news?.n ?? 0, "/errores": errs?.n ?? 0 };
   } catch { /* la página de login no necesita conteos */ }
 
   return (

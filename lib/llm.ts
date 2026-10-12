@@ -32,6 +32,8 @@ function candidates(spec?: string | null) {
     if (s && process.env[PROVIDERS[s.provider].keyEnv] && !list.some((x) => x.provider === s.provider)) list.push(s);
   }
   for (const p of availableProviders()) if (!list.some((x) => x.provider === p)) list.push({ provider: p, model: PROVIDERS[p].model });
+  // Respaldo extra de Gemini con otro modelo (distinta capacidad cuando el principal está saturado).
+  if (process.env.GEMINI_API_KEY) list.push({ provider: "gemini", model: "gemini-flash-lite-latest" });
   return list;
 }
 
@@ -70,7 +72,8 @@ export async function chat(messages: Msg[], tools?: ToolDef[], spec?: string | n
         return { message, model: `${c.provider}:${c.model}`, usage: data.usage ?? null };
       }
       lastErr = `${c.provider} ${res.status}: ${(await res.text()).slice(0, 300)}`;
-      if (res.status === 429 && attempt === 0) { await sleep(15000); continue; }
+      // Saturado (503/500/502/504) o límite (429): reintentar una vez antes de pasar al siguiente modelo.
+      if ([429, 500, 502, 503, 504].includes(res.status) && attempt === 0) { await sleep(res.status === 429 ? 15000 : 3000); continue; }
       break; // otro error → siguiente proveedor
     }
   }

@@ -106,6 +106,8 @@ export async function saveDeliverable(taskId: string, agentId: string, version: 
 }
 
 export async function failTask(taskId: string, agentId: string, status: string, error: string, started: string) {
+  const { logError } = await import("./errors");
+  await logError(`tarea (${agentId})`, error, { taskId });
   await run("UPDATE tasks SET status=?, updated_at=? WHERE id=?", [status === "working" ? "queued" : status, now(), taskId]);
   await run("INSERT INTO runs(id,agent_id,task_id,kind,status,error,started_at,finished_at) VALUES(?,?,?,'task','error',?,?,?)",
     [newId(), agentId, taskId, error, started, now()]);

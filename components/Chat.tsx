@@ -22,10 +22,12 @@ export function Chat({ agentId, agentName, initial }: { agentId: string; agentNa
     setBusy(true);
     try {
       const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agentId, text: t }) });
-      const d = await r.json();
+      const raw = await r.text();
+      let d: any;
+      try { d = JSON.parse(raw); } catch { d = { reply: "⚠️ El servidor no alcanzó a responder. Tu mensaje quedó guardado; inténtalo de nuevo en un momento." }; }
       setMsgs((m) => [...m, { role: "assistant", content: d.reply ?? `⚠️ ${d.error}`, tools: d.tools }]);
     } catch (err: any) {
-      setMsgs((m) => [...m, { role: "assistant", content: `⚠️ ${err.message}` }]);
+      setMsgs((m) => [...m, { role: "assistant", content: "⚠️ No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo." }]);
     }
     setBusy(false);
   }

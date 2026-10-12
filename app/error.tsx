@@ -1,7 +1,11 @@
 "use client";
+import { useEffect } from "react";
 
 // Si algo falla en una pantalla, se muestra esto en vez de una página rota.
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    fetch("/api/errores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: error.message, digest: error.digest, path: location.pathname }) }).catch(() => {});
+  }, [error]);
   return (
     <div className="card" style={{ maxWidth: 520, margin: "10vh auto" }}>
       <h2>🦒 Algo se trabó</h2>
